@@ -31,3 +31,15 @@ spring:
               type: elastic
               max-idle-time: 15s
               max-life-time: 60s
+          default-filters:
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET
+                statuses: 5XX
+                exceptions: java.io.IOException,java.util.concurrent.TimeoutException
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: false
