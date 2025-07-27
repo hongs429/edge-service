@@ -11,6 +11,11 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 15s # ??? ?? ?? ??? 15?? ??
 
+  session:
+    redis:
+      namespace: polar:edge
+    timeout: 10m
+
   cloud:
     gateway:
       server:
@@ -41,6 +46,15 @@ spring:
               max-idle-time: 15s
               max-life-time: 60s
           default-filters:
+            - name: SaveSession
+
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter:
+                  replenishRate: 10 # 초당 버킷에 떨어지는 토큰 갯수
+                  burstCapacity: 20 # 최대 20개 요청까지 허용
+                  requestedTokens: 1 # 하나의 요청 처리에 몇개의 토큰이 사용되는지 지정
+
             - name: Retry
               args:
                 retries: 3
@@ -52,6 +66,12 @@ spring:
                   maxBackoff: 500ms
                   factor: 2
                   basedOnPreviousValue: false
+  data:
+    redis:
+      connect-timeout: 2s
+      host: localhost
+      port: 6379
+      timeout: 1s
 
 resilience4j:
   circuitbreaker:
@@ -65,10 +85,12 @@ resilience4j:
   timelimiter:
     configs:
       default: # 모든 시간 제한에 대한 기본 설정 . 해당 타임아웃은 기본적으로 netty의 httpclient의 타임아웃시간보다 우선순위를 갖음!!
+        # 이유는 application 레벨의 타임아웃이기 때문임. httpclient 타임아웃은 네트워크 레벨임. 그렇기 때문에 결과적으로 짧은 순으로 동작함.
         timeout-duration:
-          seconds: 5 # 타임아웃 설정
+          seconds: 5 # 응답시간에 대한 application 레벨의 타임아웃 설정
 
 # 처리 순서 : TimeLimiter or HttpTimeout -> CircuitBreaker(폐쇄 상태/개방 상태 체크) -> 재시도
+
 
 logging:
   level:
